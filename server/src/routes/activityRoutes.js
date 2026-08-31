@@ -1,0 +1,12 @@
+const express = require('express');
+const activityController = require('../controllers/activityController');
+const { authenticate } = require('../middleware/auth');
+
+const router = express.Router();
+
+router.use(authenticate);
+
+router.get('/', activityController.getActivities);
+router.get('/:id', activityController.getActivityById);
+
+module.exports = router;
