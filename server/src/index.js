@@ -83,14 +83,15 @@ app.use(errorHandler);
 const startServer = async () => {
   try {
     await connectDB();
-    server.listen(config.PORT, () => {
-      console.log(`🚀 MailPilot_AI Server running in ${config.NODE_ENV} mode on port ${config.PORT}`);
-      console.log(`🔗 API Base URL: http://localhost:${config.PORT}/api`);
-    });
-  } catch (err) {
-    console.error('Failed to start server:', err.message);
-    process.exit(1);
+  } catch (dbErr) {
+    console.error('Initial DB connection attempt failed:', dbErr.message);
   }
+
+  const port = process.env.PORT || config.PORT || 5001;
+  server.listen(port, '0.0.0.0', () => {
+    console.log(`🚀 MailPilot_AI Server running in ${config.NODE_ENV} mode on port ${port}`);
+    console.log(`🔗 Health Check: http://localhost:${port}/api/health`);
+  });
 };
 
 startServer();
