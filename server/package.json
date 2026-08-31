@@ -4,6 +4,7 @@
   "description": "Backend API Server for MailPilot_AI",
   "main": "src/index.js",
   "scripts": {
+    "build": "echo 'Backend build successful'",
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
     "test": "node src/tests/runTests.js"
