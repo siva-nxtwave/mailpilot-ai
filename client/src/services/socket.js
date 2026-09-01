@@ -5,7 +5,15 @@ let socket = null;
 export const initClientSocket = (userId) => {
   if (typeof window === 'undefined') return null;
 
-  const SOCKET_URL = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:5001';
+  let SOCKET_URL = (process.env.NEXT_PUBLIC_SOCKET_URL || '').trim();
+  if (!SOCKET_URL) {
+    const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').trim();
+    if (apiUrl) {
+      SOCKET_URL = apiUrl.replace(/\/api\/?$/, '').replace(/\/+$/, '');
+    } else {
+      SOCKET_URL = 'http://localhost:5001';
+    }
+  }
 
   if (!socket) {
     socket = io(SOCKET_URL, {

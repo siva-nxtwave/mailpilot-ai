@@ -307,3 +307,90 @@ GenAI Project/
 - **AES-256-GCM Encryption**: Stored Google OAuth tokens are encrypted at rest with an isolated server encryption key.
 - **Data Minimization**: Private email contents are not logged in telemetry or AI request audit tables.
 - **CORS & Rate Limiting**: Production-grade rate limiters on authentication and AI endpoints with strict CORS restrictions.
+
+---
+
+## 🚀 Production Deployment Architecture (Vercel + Render)
+
+MailPilot_AI is organized as a unified monorepo deployed to **Vercel** (Frontend) and **Render** (Backend) from the **same GitHub repository**.
+
+```text
+GitHub Repository (Monorepo)
+├── client/  ──► Deployed on Vercel  (https://mailpilot.karthikeyantech.in)
+└── server/  ──► Deployed on Render  (https://<render-backend>.onrender.com)
+```
+
+---
+
+### 1️⃣ Backend Deployment on Render (`server/`)
+
+1. Go to your [Render Dashboard](https://dashboard.render.com/) and click **New +** → **Web Service**.
+2. Connect your GitHub repository.
+3. Configure the service settings:
+   - **Name**: `mailpilot-server` (or your preferred name)
+   - **Language**: `Node`
+   - **Root Directory**: `server`
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+4. Add the following **Environment Variables** in the Render Dashboard:
+
+| Variable | Value / Description | Sensitive? |
+| :--- | :--- | :---: |
+| `NODE_ENV` | `production` | No |
+| `CLIENT_URL` | `https://mailpilot.karthikeyantech.in` | No |
+| `MONGODB_URI` | `mongodb+srv://<user>:<password>@cluster.mongodb.net/mailpilot` | 🔒 **Secret** |
+| `JWT_SECRET` | Strong 64-character random string | 🔒 **Secret** |
+| `CREDENTIAL_ENCRYPTION_KEY` | 32-character AES key for encrypting OAuth tokens | 🔒 **Secret** |
+| `GOOGLE_CLIENT_ID` | Your Google Cloud OAuth Client ID | No |
+| `GOOGLE_CLIENT_SECRET` | Your Google Cloud OAuth Client Secret | 🔒 **Secret** |
+| `GOOGLE_REDIRECT_URI` | `https://<render-backend>.onrender.com/api/integrations/gmail/oauth/callback` | No |
+| `OPENROUTER_API_KEY` | (Optional) Primary AI model key | 🔒 **Secret** |
+| `GEMINI_API_KEY` | (Optional) Secondary fallback AI key | 🔒 **Secret** |
+| `REDIS_URL` | (Optional) Redis connection URL | 🔒 **Secret** |
+
+> [!NOTE]
+> Render automatically injects `process.env.PORT`. The backend server listens on `0.0.0.0` and dynamically binds to this port.
+
+---
+
+### 2️⃣ Frontend Deployment on Vercel (`client/`)
+
+1. Go to your [Vercel Dashboard](https://vercel.com/dashboard) and click **Add New...** → **Project**.
+2. Import the same GitHub repository.
+3. In the project setup screen:
+   - **Framework Preset**: `Next.js`
+   - **Root Directory**: Click **Edit** and select `client`
+   - **Build Command**: `npm run build` (default)
+   - **Output Directory**: `.next` (default)
+4. Under **Environment Variables**, add:
+
+| Variable | Value |
+| :--- | :--- |
+| `NEXT_PUBLIC_API_URL` | `https://<render-backend>.onrender.com` |
+
+5. Click **Deploy**.
+6. In **Project Settings** → **Domains**, add your custom domain:
+   `https://mailpilot.karthikeyantech.in`
+
+---
+
+### 3️⃣ Google Cloud OAuth Redirect URI Configuration
+
+In [Google Cloud Console](https://console.cloud.google.com/apis/credentials):
+1. Open your OAuth 2.0 Client ID.
+2. Under **Authorized redirect URIs**, add both local and production callback URLs:
+   - **Local Development**: `http://localhost:5001/api/integrations/gmail/oauth/callback`
+   - **Production (Render)**: `https://<render-backend>.onrender.com/api/integrations/gmail/oauth/callback`
+3. Save changes.
+
+---
+
+### 🔒 Secret Isolation & Security Rules
+
+To maintain bank-grade security across the monorepo:
+- ❌ **Never** place backend secrets in Vercel or `client/.env.local`.
+- ❌ **Never** commit `.env` files to GitHub (all `.env*` files are ignored in `.gitignore`).
+- ✅ Only `NEXT_PUBLIC_*` variables are exposed to the browser.
+- ✅ OAuth refresh tokens are encrypted at rest with `CREDENTIAL_ENCRYPTION_KEY` before storing in MongoDB.
+- ✅ Production CORS strictly allows only `CLIENT_URL=https://mailpilot.karthikeyantech.in` (wildcard `*` is disabled).
+

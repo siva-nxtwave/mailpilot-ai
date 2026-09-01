@@ -26,10 +26,11 @@ const startGmailOAuth = async (req, res, next) => {
 };
 
 const handleGmailCallback = async (req, res, next) => {
+  const clientBase = (config.CLIENT_URL || 'http://localhost:3000').split(',')[0].trim().replace(/\/+$/, '');
   try {
     const { code, state } = req.query;
     if (!code) {
-      return res.redirect(`${config.CLIENT_URL}/integrations?error=missing_code`);
+      return res.redirect(`${clientBase}/integrations?error=missing_code`);
     }
 
     // In OAuth callback via browser redirect, req.user might be in session or passed in state
@@ -37,14 +38,14 @@ const handleGmailCallback = async (req, res, next) => {
     const userId = req.user ? req.user._id : state;
 
     if (!userId) {
-      return res.redirect(`${config.CLIENT_URL}/integrations?error=missing_user`);
+      return res.redirect(`${clientBase}/integrations?error=missing_user`);
     }
 
     await gmailService.handleOAuthCallback(userId, code);
-    return res.redirect(`${config.CLIENT_URL}/integrations?success=gmail_connected`);
+    return res.redirect(`${clientBase}/integrations?success=gmail_connected`);
   } catch (error) {
     console.error('Gmail OAuth Callback Error:', error.message);
-    return res.redirect(`${config.CLIENT_URL}/integrations?error=${encodeURIComponent(error.message)}`);
+    return res.redirect(`${clientBase}/integrations?error=${encodeURIComponent(error.message)}`);
   }
 };
 

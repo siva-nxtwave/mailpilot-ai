@@ -29,14 +29,38 @@ app.use(helmet({
   crossOriginResourcePolicy: false
 }));
 
+// Helper to parse allowed origins from config.CLIENT_URL
+const parseAllowedOrigins = () => {
+  const urls = (config.CLIENT_URL || '').split(',').map((u) => u.trim().replace(/\/+$/, '')).filter(Boolean);
+  if (!urls.includes('https://mailpilot.karthikeyantech.in')) {
+    urls.push('https://mailpilot.karthikeyantech.in');
+  }
+  return urls;
+};
+
+const allowedOrigins = parseAllowedOrigins();
+
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl) or matching client url
-    if (!origin || origin === config.CLIENT_URL || origin.includes('localhost') || origin.includes('127.0.0.1')) {
-      callback(null, true);
-    } else {
-      callback(null, true); // Permissive in local dev
+    // Allow non-browser requests (like server-to-server, curl, mobile, health checks)
+    if (!origin) {
+      return callback(null, true);
     }
+
+    const normalizedOrigin = origin.replace(/\/+$/, '');
+
+    // Allow configured production origins
+    if (allowedOrigins.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+
+    // In non-production environments, also allow localhost and 127.0.0.1
+    if (config.NODE_ENV !== 'production' && (normalizedOrigin.includes('localhost') || normalizedOrigin.includes('127.0.0.1'))) {
+      return callback(null, true);
+    }
+
+    // Reject all other unauthorized origins in production
+    return callback(new Error(`Blocked by CORS policy: Origin ${origin} is not allowed.`));
   },
   credentials: true
 }));
